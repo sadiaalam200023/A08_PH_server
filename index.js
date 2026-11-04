@@ -53,6 +53,30 @@ app.post("/add-studios", async (req, res) => {
 });
 
 
+app.get("/all-studios", async (req, res) => {
+  const result = await studios.find().toArray();
+  res.send(result);
+});
+
+app.get("/featured-studios", async (req, res) => {
+  try {
+    const db = client.db("StudioSpace");
+
+    const result = await db.collection("studios")
+      .find()
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(6)
+      .toArray();
+
+    res.send(result);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      message: "Failed to fetch featured studios",
+    });
+  }
+});
 app.get("/", (req, res) => {
   res.send({ message: "Server ok!" });
 });
