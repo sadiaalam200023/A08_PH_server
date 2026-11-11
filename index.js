@@ -54,10 +54,25 @@ app.post("/add-studios", async (req, res) => {
 });
 
 
+
 app.get("/all-studios", async (req, res) => {
-  const result = await studios.find().toArray();
-  res.send(result);
+  try {
+    const db = client.db("StudioSpace");
+
+    const result = await db.collection("studios")
+      .find()
+      .toArray();
+
+    res.send(result);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      message: "Failed to fetch all studios",
+    });
+  }
 });
+
 
 app.get("/featured-studios", async (req, res) => {
   try {
