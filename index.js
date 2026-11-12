@@ -17,6 +17,101 @@ export async function connectToMongoDB() {
     console.dir(err);
   }
 }
+//
+app.post("/add-bookings", async (req, res) => {
+  try {
+    const { studioId, customerEmail, bookingDate, hours } = req.body;
+
+    if (!studioId || !ObjectId.isValid(studioId)) {
+      return res.status(400).json({
+        message: "Invalid studio ID",
+      });
+    }
+
+    if (!customerEmail || !bookingDate || !hours) {
+      return res.status(400).json({
+        message: "Please provide all booking information",
+      });
+    }
+
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(bookingDate) ||
+      Number.isNaN(Date.parse(`${bookingDate}T00:00:00Z`)) ||
+      new Date(`${bookingDate}T00:00:00Z`).toISOString().slice(0, 10) !== bookingDate
+    ) {
+      return res.status(400).json({
+        message: "Invalid booking date",
+      });
+    }
+
+    const bookingHours = Number(hours);
+
+    if (
+      !Number.isInteger(bookingHours) ||
+      bookingHours < 1 ||
+      bookingHours > 24
+    ) {
+      return res.status(400).json({
+        message: "Booking hours must be between 1 and 24",
+      });
+    }
+
+    const db = client.db("StudioSpace");
+
+    // Get the studio from MongoDB
+    const studio = await db.collection("studios").findOne({
+      _id: new ObjectId(studioId),
+    });
+
+    if (!studio) {
+      return res.status(404).json({
+        message: "Studio not found",
+      });
+    }
+
+    // Calculate prices on the server
+    const hourlyRate = Number(studio.hourlyRate);
+    const securityDeposit = Number(studio.securityDeposit || 0);
+    const rentalCost = hourlyRate * bookingHours;
+    const totalAmount = rentalCost + securityDeposit;
+
+    const booking = {
+      studioId: studio._id,
+      studioTitle: studio.title,
+      studioImage: studio.image,
+      category: studio.category,
+      location: studio.location,
+
+      ownerEmail: studio.ownerEmail,
+      customerEmail: customerEmail,
+
+      bookingDate,
+      hours: bookingHours,
+
+      hourlyRate,
+      securityDeposit,
+      rentalCost,
+      totalAmount,
+
+      status: "Pending",
+      createdAt: new Date(),
+    };
+
+    const result = await db.collection("bookings").insertOne(booking);
+
+    return res.status(201).json({
+      message: "Booking submitted successfully!",
+      bookingId: result.insertedId,
+    });
+  } catch (error) {
+    console.error("Booking creation error:", error);
+
+    return res.status(500).json({
+      message: "Failed to create booking",
+    });
+  }
+});
+//
 connectToMongoDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server is running at ${PORT}`);
