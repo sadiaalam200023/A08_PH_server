@@ -112,6 +112,87 @@ app.post("/add-bookings", async (req, res) => {
   }
 });
 //
+
+app.get("/my-bookings", async (req, res) => {
+  try {
+    const email = req.query.email;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "User email is required",
+      });
+    }
+
+    const db = client.db("StudioSpace");
+
+    const bookings = await db.collection("bookings")
+      .find({ customerEmail: email })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.status(200).json(bookings);
+  } catch (error) {
+    console.error("Fetch bookings error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch bookings",
+    });
+  }
+});
+//
+
+app.patch("/bookings/:id/cancel", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { customerEmail } = req.body;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid booking ID",
+      });
+    }
+
+    if (!customerEmail) {
+      return res.status(400).json({
+        message: "Customer email is required",
+      });
+    }
+
+    const db = client.db("StudioSpace");
+
+    const result = await db.collection("bookings").updateOne(
+      {
+        _id: new ObjectId(id),
+        customerEmail,
+        status: "Pending",
+      },
+      {
+        $set: {
+          status: "Cancelled",
+          cancelledAt: new Date(),
+        },
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        message: "Booking not found or it can no longer be cancelled.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Booking cancelled successfully!",
+    });
+  } catch (error) {
+    console.error("Cancel booking error:", error);
+
+    res.status(500).json({
+      message: "Failed to cancel booking",
+    });
+  }
+});
+
+//
 connectToMongoDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server is running at ${PORT}`);
