@@ -158,3 +158,64 @@ app.delete("/studios/:id", async (req, res) => {
     });
   }
 });
+//
+app.put("/studios/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid studio ID",
+      });
+    }
+
+    const {
+      title,
+      category,
+      hourlyRate,
+      securityDeposit,
+      capacity,
+      location,
+      image,
+      overview,
+      amenities,
+    } = req.body;
+
+    const updatedData = {
+      title,
+      category,
+      hourlyRate: Number(hourlyRate),
+      securityDeposit: Number(securityDeposit),
+      capacity: Number(capacity),
+      location,
+      image,
+      overview,
+      amenities: Array.isArray(amenities) ? amenities : [],
+      updatedAt: new Date(),
+    };
+
+    const db = client.db("StudioSpace");
+
+    const result = await db.collection("studios").updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedData }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        message: "Studio not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Studio updated successfully!",
+    });
+
+  } catch (error) {
+    console.error("Error updating studio:", error);
+
+    return res.status(500).json({
+      message: "Failed to update studio",
+    });
+  }
+});
