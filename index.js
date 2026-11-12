@@ -121,3 +121,40 @@ app.get("/studios/:id", async (req, res) => {
 app.get("/", (req, res) => {
   res.send({ message: "Server ok!" });
 });
+//
+app.delete("/studios/:id", async (req, res) => {
+  app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+  try {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({
+        message: "Invalid studio ID",
+      });
+    }
+
+    const db = client.db("StudioSpace");
+
+    const result = await db.collection("studios").deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({
+        message: "Studio not found",
+      });
+    }
+
+    res.status(200).send({
+      message: "Studio deleted successfully!",
+    });
+  } catch (error) {
+    console.error("Error deleting studio:", error);
+
+    res.status(500).send({
+      message: "Failed to delete studio",
+    });
+  }
+});
